@@ -1,6 +1,6 @@
 module Lib
-    ( test_function
+    ( computeBendersMoves
     ) where
 
-test_function :: String -> Int
-test_function = read
+computeBendersMoves :: Int -> Int -> [String] -> [String]
+computeBendersMoves = undefined
