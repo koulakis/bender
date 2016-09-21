@@ -58,13 +58,15 @@ readMap nLines nColumns stringArray =
   |> zip [(x, y) | x <- [1..nLines],
                    y <- [1..nColumns]]
   |> Map.fromList
-symbolPositionsInMap symbol cityMap = cityMap |> Map.filter (== symbol)
+symbolPositionsInMap symbol cityMap =
+  cityMap
+  |> Map.filter (== symbol)
+  |> Map.keys
 readMapLocation location cityMap = fromMaybe undefined (Map.lookup location cityMap)
 
 -- Calculating direction
 blocked bender cityMap direction =
-  let x = bender |> location |> fst
-      y = bender |> location |> snd
+  let (x, y) = location bender
       checkIfBlocked nextLocation =
         let block = readMapLocation nextLocation cityMap
         in block == Wall || (block == Obstacle && not (breakerMode bender))
@@ -84,6 +86,40 @@ newDirection bender cityMap =
           then List.find (not . blocked bender cityMap) priorities |> fromMaybe undefined
           else currentDirection
     in bender { heading = newDirection }
+
+-- Changing the state
+start = head . symbolPositionsInMap Start
+teleporters = symbolPositionsInMap Teleporter
+
+newBenderPositionState bender cityMap =
+  let (x, y) = location bender
+      temporaryLocation =
+        case heading bender of
+          S -> (x, y + 1)
+          E -> (x + 1, y)
+          N -> (x, y - 1)
+          W -> (x - 1, y)
+      nextLocation =
+        if readMapLocation temporaryLocation cityMap == Teleporter
+        then teleporters cityMap
+              |> filter (/= temporaryLocation)
+              |> head
+        else temporaryLocation
+      nextBlock = readMapLocation nextLocation cityMap
+
+      nextBreakerMode =
+        if nextBlock == Beer
+        then not $ breakerMode bender
+        else breakerMode bender
+      nextInverted =
+        if nextBlock == Invert
+        then not $ inverted bender
+        else inverted bender
+  in bender { location = nextLocation,
+              breakerMode = nextBreakerMode,
+              inverted = nextInverted }
+
+
 
 computeBendersMoves :: Int -> Int -> [String] -> [String]
 computeBendersMoves = undefined
