@@ -119,7 +119,25 @@ newBenderPositionState bender cityMap =
               breakerMode = nextBreakerMode,
               inverted = nextInverted }
 
-
+stateUpdate (bender, cityMap) =
+  let oldLocation = location bender
+      oldBlock = readMapLocation oldLocation cityMap
+      reorientedBender =
+        newDirection
+          (bender { heading =
+                      case oldBlock of
+                        NewHeading h -> h
+                        _ -> heading bender})
+          cityMap
+      relocatedBender = newBenderPositionState reorientedBender cityMap
+      newState =
+        case oldBlock of
+          Obstacle ->
+            (relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
+             Map.insert oldLocation Empty cityMap)
+          Death -> (bender { alive = False }, cityMap)
+          _ -> (relocatedBender, cityMap)
+    in (heading bender, newState)
 
 computeBendersMoves :: Int -> Int -> [String] -> [String]
 computeBendersMoves = undefined
