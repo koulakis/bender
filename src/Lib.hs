@@ -3,12 +3,14 @@ module Lib
     ) where
 
 import qualified Data.Map as Map
+import qualified Data.List as List
 import Data.Maybe
+
 -- Pipes
 (|>) x f = f x
 
 -- Types
-data Direction = S | E | N | W deriving (Show)
+data Direction = S | E | N | W deriving (Show, Eq)
 data Block =
   Start
   | Empty
@@ -18,14 +20,14 @@ data Block =
   | NewHeading Direction
   | Beer
   | Invert
-  | Teleporter deriving (Show)
+  | Teleporter deriving (Show, Eq)
 data Bender =
   Bender { inverted :: Bool,
            breakerMode :: Bool,
            location :: (Int, Int),
            heading :: Direction,
            alive :: Bool,
-           obstaclesEaten :: Int} deriving (Show)
+           obstaclesEaten :: Int} deriving (Show, Eq)
 type CityMap = Map.Map (Int, Int) Block
 
 -- Parsing, showing
@@ -37,17 +39,17 @@ directionName direction =
    W -> "WEST"
 symbolsAssosiation =
   [('@', Start),
-   (' ',  Empty),
-   ('#',  Wall),
-   ('X',  Obstacle),
-   ('$',  Death),
-   ('S',  NewHeading S),
-   ('E',  NewHeading E),
-   ('N',  NewHeading N),
-   ('W',  NewHeading W),
-   ('B',  Beer),
-   ('I',  Invert),
-   ('T',  Teleporter) ]
+   (' ', Empty),
+   ('#', Wall),
+   ('X', Obstacle),
+   ('$', Death),
+   ('S', NewHeading S),
+   ('E', NewHeading E),
+   ('N', NewHeading N),
+   ('W', NewHeading W),
+   ('B', Beer),
+   ('I', Invert),
+   ('T', Teleporter) ]
 mapReader = Map.fromList symbolsAssosiation
 readMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapReader)
 readMap nLines nColumns stringArray =
@@ -57,7 +59,31 @@ readMap nLines nColumns stringArray =
                    y <- [1..nColumns]]
   |> Map.fromList
 symbolPositionsInMap symbol cityMap = cityMap |> Map.filter (== symbol)
+readMapLocation location cityMap = fromMaybe undefined (Map.lookup location cityMap)
 
+-- Calculating direction
+blocked bender cityMap direction =
+  let x = bender |> location |> fst
+      y = bender |> location |> snd
+      checkIfBlocked nextLocation =
+        let block = readMapLocation nextLocation cityMap
+        in block == Wall || (block == Obstacle && not (breakerMode bender))
+  in case direction of
+      S -> checkIfBlocked (x, y + 1)
+      E -> checkIfBlocked (x + 1, y)
+      N -> checkIfBlocked (x, y - 1)
+      W -> checkIfBlocked (x - 1, y)
+
+newDirection bender cityMap =
+    let currentDirection = heading bender
+        priorities =
+          if inverted bender then [W, N, E, S]
+          else [S, E, N, W]
+        newDirection =
+          if blocked bender cityMap currentDirection
+          then List.find (not . blocked bender cityMap) priorities |> fromMaybe undefined
+          else currentDirection
+    in bender { heading = newDirection }
 
 computeBendersMoves :: Int -> Int -> [String] -> [String]
 computeBendersMoves = undefined
