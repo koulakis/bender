@@ -2,6 +2,9 @@ module Lib
     ( computeBendersMoves
     ) where
 
+-- Pipes
+(|>) x f = f x
+
 -- Types
 data Direction = S | E | N | W deriving (Show)
 data Block =
@@ -21,6 +24,7 @@ data Bender =
          , heading :: Direction
          , alive :: Bool
          , obstaclesEaten :: Int} deriving (Show)
+type Map = [[Block]]
 
 -- Parsing, showing
 directionName direction =
@@ -43,6 +47,7 @@ readMapSymbol symbol =
   'B' -> Beer
   'I' -> Invert
   'T' -> Teleporter
+readMap = readMapSymbol |> map |> map
 
 computeBendersMoves :: Int -> Int -> [String] -> [String]
 computeBendersMoves = undefined
