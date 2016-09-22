@@ -5,12 +5,14 @@ module Lib
 import qualified Data.Map as Map
 import qualified Data.List as List
 import Data.Maybe
+import Control.Monad.State
+import Data.Set as Set
 
 -- Pipes
 (|>) x f = f x
 
 -- Types
-data Direction = S | E | N | W deriving (Show, Eq)
+data Direction = S | E | N | W deriving (Show, Eq, Ord)
 data Block =
   Start
   | Empty
@@ -27,7 +29,7 @@ data Bender =
            location :: (Int, Int),
            heading :: Direction,
            alive :: Bool,
-           obstaclesEaten :: Int} deriving (Show, Eq)
+           obstaclesEaten :: Int} deriving (Show, Eq, Ord)
 type CityMap = Map.Map (Int, Int) Block
 
 -- Parsing, showing
@@ -54,7 +56,7 @@ mapReader = Map.fromList symbolsAssosiation
 readMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapReader)
 readMap nLines nColumns stringArray =
   stringArray
-  |> concatMap (map readMapSymbol)
+  |> concatMap (List.map readMapSymbol)
   |> zip [(x, y) | x <- [1..nLines],
                    y <- [1..nColumns]]
   |> Map.fromList
@@ -63,6 +65,9 @@ symbolPositionsInMap symbol cityMap =
   |> Map.filter (== symbol)
   |> Map.keys
 readMapLocation location cityMap = fromMaybe undefined (Map.lookup location cityMap)
+
+start = head . symbolPositionsInMap Start
+teleporters = symbolPositionsInMap Teleporter
 
 -- Calculating direction
 blocked bender cityMap direction =
@@ -88,9 +93,6 @@ newDirection bender cityMap =
     in bender { heading = newDirection }
 
 -- Changing the state
-start = head . symbolPositionsInMap Start
-teleporters = symbolPositionsInMap Teleporter
-
 newBenderPositionState bender cityMap =
   let (x, y) = location bender
       temporaryLocation =
@@ -102,7 +104,7 @@ newBenderPositionState bender cityMap =
       nextLocation =
         if readMapLocation temporaryLocation cityMap == Teleporter
         then teleporters cityMap
-              |> filter (/= temporaryLocation)
+              |> List.filter (/= temporaryLocation)
               |> head
         else temporaryLocation
       nextBlock = readMapLocation nextLocation cityMap
@@ -119,7 +121,7 @@ newBenderPositionState bender cityMap =
               breakerMode = nextBreakerMode,
               inverted = nextInverted }
 
-stateUpdate (bender, cityMap) =
+stateUpdate (oldBenders, bender, cityMap) =
   let oldLocation = location bender
       oldBlock = readMapLocation oldLocation cityMap
       reorientedBender =
@@ -130,14 +132,38 @@ stateUpdate (bender, cityMap) =
                         _ -> heading bender})
           cityMap
       relocatedBender = newBenderPositionState reorientedBender cityMap
+      newBenders = Set.insert bender oldBenders
       newState =
         case oldBlock of
           Obstacle ->
-            (relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
+            (newBenders,
+             relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
              Map.insert oldLocation Empty cityMap)
-          Death -> (bender { alive = False }, cityMap)
-          _ -> (relocatedBender, cityMap)
-    in (heading bender, newState)
+          Death -> (newBenders, bender { alive = False }, cityMap)
+          _ -> (newBenders, relocatedBender, cityMap)
+  in (directionName $ heading bender, newState)
+
+-- Run game
+update :: State (Set Bender, Bender, CityMap) String
+update = state stateUpdate
+
+runGame = do
+  (oldBenders, bender, cityMap) <- get
+  if member bender oldBenders then return ["LOOP"]
+  else if not $ alive bender then return []
+  else do
+    direction <- update
+    restDirections <- runGame
+    return (direction:restDirections)
 
 computeBendersMoves :: Int -> Int -> [String] -> [String]
-computeBendersMoves = undefined
+computeBendersMoves nLines nColumns stringMap =
+  let cityMap = readMap nLines nColumns stringMap
+      initialBender =
+        Bender { inverted = False,
+                 breakerMode = False,
+                 location = start cityMap,
+                 heading = S,
+                 alive = True,
+                 obstaclesEaten = 0}
+  in evalState runGame (Set.empty, initialBender, cityMap)
