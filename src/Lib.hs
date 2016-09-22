@@ -124,30 +124,35 @@ newBenderPositionState bender cityMap =
               breakerMode = nextBreakerMode,
               inverted = nextInverted }
 
-stateUpdate (oldBenders, bender, cityMap) =
-  let oldLocation = location bender
+stateUpdate currentState =
+  let (bender, cityMap) = head currentState
+      oldLocation = location bender
       oldBlock = readMapLocation oldLocation cityMap
       reorientedBender = newDirection bender cityMap
       relocatedBender = newBenderPositionState reorientedBender cityMap
-      newBenders = Set.insert bender oldBenders
       newBlock = readMapLocation (location relocatedBender) cityMap
-      newState =
+      (newBender, newMap) =
         case (oldBlock, newBlock) of
-          (_, Death) -> (newBenders, bender { alive = False }, cityMap)
+          (_, Death) -> (bender { alive = False }, cityMap)
           (Obstacle, _) ->
-            (newBenders,
-             relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
+            (relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
              Map.insert oldLocation Empty cityMap)
-          _ -> (newBenders, relocatedBender, cityMap)
-  in (directionName $ heading reorientedBender, newState)
+          _ -> (relocatedBender, cityMap)
+  in (directionName $ heading reorientedBender, (newBender, newMap):currentState)
 
--- Run game
-update :: State (Set Bender, Bender, CityMap) String
+
+
+-- State manipulation
 update = state stateUpdate
 
+
+-- Run game
 runGame = do
-  (oldBenders, bender, cityMap) <- get
-  if member bender oldBenders then return ["LOOP"]
+  currentState <- get
+  let benders = List.map fst currentState
+  let bender = head benders
+  let sameConfigurationAppeared = length benders > 1 && elem bender (tail benders)
+  if sameConfigurationAppeared then return ["LOOP"]
   else if not $ alive bender then return []
   else do
     direction <- update
@@ -164,4 +169,4 @@ computeBendersMoves stringMap =
                  heading = S,
                  alive = True,
                  obstaclesEaten = 0}
-  in evalState runGame (Set.empty, initialBender, cityMap)
+  in evalState runGame [(initialBender, cityMap)]
