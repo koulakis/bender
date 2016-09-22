@@ -54,11 +54,11 @@ symbolsAssosiation =
    ('T', Teleporter) ]
 mapReader = Map.fromList symbolsAssosiation
 readMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapReader)
-readMap nLines nColumns stringArray =
+readMap stringArray =
   stringArray
   |> concatMap (List.map readMapSymbol)
-  |> zip [(x, y) | x <- [1..nLines],
-                   y <- [1..nColumns]]
+  |> zip [(x, y) | y <- [1..(stringArray |> length)],
+                   x <- [1..(stringArray |> head |> length)]]
   |> Map.fromList
 symbolPositionsInMap symbol cityMap =
   cityMap
@@ -82,15 +82,18 @@ blocked bender cityMap direction =
       W -> checkIfBlocked (x - 1, y)
 
 newDirection bender cityMap =
-    let currentDirection = heading bender
+    let currentDirection =
+          case readMapLocation (location bender) cityMap of
+            NewHeading d -> d
+            _ -> heading bender
         priorities =
           if inverted bender then [W, N, E, S]
           else [S, E, N, W]
-        newDirection =
+        finalDirection =
           if blocked bender cityMap currentDirection
           then List.find (not . blocked bender cityMap) priorities |> fromMaybe undefined
           else currentDirection
-    in bender { heading = newDirection }
+    in bender { heading = finalDirection }
 
 -- Changing the state
 newBenderPositionState bender cityMap =
@@ -124,24 +127,19 @@ newBenderPositionState bender cityMap =
 stateUpdate (oldBenders, bender, cityMap) =
   let oldLocation = location bender
       oldBlock = readMapLocation oldLocation cityMap
-      reorientedBender =
-        newDirection
-          (bender { heading =
-                      case oldBlock of
-                        NewHeading h -> h
-                        _ -> heading bender})
-          cityMap
+      reorientedBender = newDirection bender cityMap
       relocatedBender = newBenderPositionState reorientedBender cityMap
       newBenders = Set.insert bender oldBenders
+      newBlock = readMapLocation (location relocatedBender) cityMap
       newState =
-        case oldBlock of
-          Obstacle ->
+        case (oldBlock, newBlock) of
+          (_, Death) -> (newBenders, bender { alive = False }, cityMap)
+          (Obstacle, _) ->
             (newBenders,
              relocatedBender { obstaclesEaten = obstaclesEaten bender + 1 },
              Map.insert oldLocation Empty cityMap)
-          Death -> (newBenders, bender { alive = False }, cityMap)
           _ -> (newBenders, relocatedBender, cityMap)
-  in (directionName $ heading bender, newState)
+  in (directionName $ heading reorientedBender, newState)
 
 -- Run game
 update :: State (Set Bender, Bender, CityMap) String
@@ -156,9 +154,9 @@ runGame = do
     restDirections <- runGame
     return (direction:restDirections)
 
-computeBendersMoves :: Int -> Int -> [String] -> [String]
-computeBendersMoves nLines nColumns stringMap =
-  let cityMap = readMap nLines nColumns stringMap
+computeBendersMoves :: [String] -> [String]
+computeBendersMoves stringMap =
+  let cityMap = readMap stringMap
       initialBender =
         Bender { inverted = False,
                  breakerMode = False,

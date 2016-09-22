@@ -3,34 +3,33 @@ module Spec where
 import Lib (computeBendersMoves)
 import Test.HUnit
 
+map1 =
+  ["######",
+   "#@E $#",
+   "# N  #",
+   "#X   #",
+   "######"]
 test1 = TestCase $ assertEqual
   "Simple moves"
-  (computeBendersMoves
-    5
-    6
-    ["######",
-     "#@E $#",
-     "# N  #",
-     "#X   #",
-     "######"])
+  (computeBendersMoves map1)
   ["SOUTH",
-   "SOUTH",
+   "EAST",
+   "NORTH",
    "EAST",
    "EAST"]
 
+map2 =
+  ["########",
+   "# @    #",
+   "#     X#",
+   "# XXX  #",
+   "#   XX #",
+   "#   XX #",
+   "#     $#",
+   "########"]
 test2 = TestCase $ assertEqual
   "Obstacles"
-  (computeBendersMoves
-    10
-    10
-    ["########",
-     "# @    #",
-     "#     X#",
-     "# XXX  #",
-     "#   XX #",
-     "#   XX #",
-     "#     $#",
-     "########"])
+  (computeBendersMoves map2)
   ["SOUTH",
    "EAST",
    "EAST",
@@ -41,19 +40,18 @@ test2 = TestCase $ assertEqual
    "SOUTH",
    "SOUTH"]
 
+map3 =
+  ["########",
+   "#     $#",
+   "#      #",
+   "#      #",
+   "#  @   #",
+   "#      #",
+   "#      #",
+   "########"]
 test3 = TestCase $ assertEqual
   "Priorities"
-  (computeBendersMoves
-    8
-    8
-    ["########",
-     "#     $#",
-     "#      #",
-     "#      #",
-     "#  @   #",
-     "#      #",
-     "#      #",
-     "########"])
+  (computeBendersMoves map3)
   ["SOUTH",
    "SOUTH",
    "EAST",
