@@ -140,11 +140,15 @@ stateUpdate currentState =
           _ -> (relocatedBender, cityMap)
   in (directionName $ heading reorientedBender, (newBender, newMap):currentState)
 
-
+undoMove currentState =
+  case currentState of
+    x:xs -> ((), xs)
+    _ -> ((), currentState)
 
 -- State manipulation
 update = state stateUpdate
-
+undo :: State [(Bender, CityMap)] ()
+undo = state undoMove
 
 -- Run game
 runGame = do
