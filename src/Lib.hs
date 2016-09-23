@@ -1,28 +1,18 @@
-module Lib
-    ( update,
-      undo,
-      doNothing,
-      readMap,
-      printMap,
-      initialBender,
-      (|>),
-      printState,
-      computeBendersMoves
-    ) where
+module Lib where
 
 import qualified Data.Map as Map
-import qualified Data.List as List
+import Data.List as List
 import Data.Maybe
 import Control.Monad.State
-import Data.Set as Set
+import qualified Data.Set as Set
 import Data.Function (on)
 
 -- Custom tools
 (|>) x f = f x
 groupByUnordered transform collection =
   collection
-  |> List.sortBy (compare `on` transform)
-  |> List.groupBy ((==) `on` transform)
+  |> sortBy (compare `on` transform)
+  |> groupBy ((==) `on` transform)
 
 -- Types
 data Direction = S | E | N | W deriving (Show, Eq, Ord)
@@ -70,13 +60,13 @@ symbolsAssosiation =
 mapReader = Map.fromList symbolsAssosiation
 mapPrinter =
   symbolsAssosiation
-  |> List.map (\(x, y) -> (y, x))
+  |> map (\(x, y) -> (y, x))
   |> Map.fromList
 readMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapReader)
 printMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapPrinter)
 readMap stringArray =
   stringArray
-  |> concatMap (List.map readMapSymbol)
+  |> concatMap (map readMapSymbol)
   |> zip [(x, y) | y <- [1..(stringArray |> length)],
                    x <- [1..(stringArray |> head |> length)]]
   |> Map.fromList
@@ -84,8 +74,8 @@ printMap cityMap =
   cityMap
   |> Map.toList
   |> groupByUnordered (snd . fst)
-  |> List.map (List.map (printMapSymbol . snd))
-  |> List.intersperse "\n"
+  |> map (map (printMapSymbol . snd))
+  |> intersperse "\n"
   |> (\l -> "\n":l)
   |> concat
 
@@ -127,7 +117,7 @@ newDirection bender cityMap =
           else [S, E, N, W]
         finalDirection =
           if blocked bender cityMap currentDirection
-          then List.find (not . blocked bender cityMap) priorities |> fromMaybe undefined
+          then find (not . blocked bender cityMap) priorities |> fromMaybe undefined
           else currentDirection
     in bender { heading = finalDirection }
 
@@ -143,7 +133,7 @@ newBenderPositionState bender cityMap =
       nextLocation =
         if readMapLocation temporaryLocation cityMap == Teleporter
         then teleporters cityMap
-              |> List.filter (/= temporaryLocation)
+              |> filter (/= temporaryLocation)
               |> head
         else temporaryLocation
       nextBlock = readMapLocation nextLocation cityMap
@@ -198,7 +188,7 @@ doNothing = state (\currentState -> ("", currentState))
 -- Run game
 runGame = do
   currentState <- get
-  let benders = List.map fst currentState
+  let benders = map fst currentState
   let bender = head benders
   let sameConfigurationAppeared = length benders > 1 && elem bender (tail benders)
   if sameConfigurationAppeared then return ["LOOP"]
