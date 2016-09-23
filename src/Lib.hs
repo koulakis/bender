@@ -1,5 +1,13 @@
 module Lib
-    ( computeBendersMoves
+    ( update,
+      undo,
+      doNothing,
+      readMap,
+      printMap,
+      initialBender,
+      (|>),
+      printState,
+      computeBendersMoves
     ) where
 
 import qualified Data.Map as Map
@@ -7,6 +15,7 @@ import qualified Data.List as List
 import Data.Maybe
 import Control.Monad.State
 import Data.Set as Set
+import Data.Function (on)
 
 -- Pipes
 (|>) x f = f x
@@ -15,6 +24,7 @@ import Data.Set as Set
 data Direction = S | E | N | W deriving (Show, Eq, Ord)
 data Block =
   Start
+  | BenderCharacter
   | Empty
   | Wall
   | Obstacle
@@ -22,7 +32,7 @@ data Block =
   | NewHeading Direction
   | Beer
   | Invert
-  | Teleporter deriving (Show, Eq)
+  | Teleporter deriving (Show, Eq, Ord)
 data Bender =
   Bender { inverted :: Bool,
            breakerMode :: Bool,
@@ -40,7 +50,8 @@ directionName direction =
    N -> "NORTH"
    W -> "WEST"
 symbolsAssosiation =
-  [('@', Start),
+  [('!', BenderCharacter),
+   ('@', Start),
    (' ', Empty),
    ('#', Wall),
    ('X', Obstacle),
@@ -53,13 +64,27 @@ symbolsAssosiation =
    ('I', Invert),
    ('T', Teleporter) ]
 mapReader = Map.fromList symbolsAssosiation
+mapPrinter =
+  symbolsAssosiation
+  |> List.map (\(x, y) -> (y, x))
+  |> Map.fromList
 readMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapReader)
+printMapSymbol symbol = fromMaybe undefined (Map.lookup symbol mapPrinter)
 readMap stringArray =
   stringArray
   |> concatMap (List.map readMapSymbol)
   |> zip [(x, y) | y <- [1..(stringArray |> length)],
                    x <- [1..(stringArray |> head |> length)]]
   |> Map.fromList
+printMap cityMap =
+  cityMap
+  |> Map.toList
+  |> List.groupBy ((==) `on` fst .fst)
+  |> List.map (List.map (printMapSymbol . snd))
+  |> List.intersperse "\n"
+  |> (\l -> "\n":l)
+  |> concat
+
 symbolPositionsInMap symbol cityMap =
   cityMap
   |> Map.filter (== symbol)
@@ -68,6 +93,13 @@ readMapLocation location cityMap = fromMaybe undefined (Map.lookup location city
 
 start = head . symbolPositionsInMap Start
 teleporters = symbolPositionsInMap Teleporter
+initialBender cityMap =
+  Bender { inverted = False,
+           breakerMode = False,
+           location = start cityMap,
+           heading = S,
+           alive = True,
+           obstaclesEaten = 0}
 
 -- Calculating direction
 blocked bender cityMap direction =
@@ -141,14 +173,23 @@ stateUpdate currentState =
   in (directionName $ heading reorientedBender, (newBender, newMap):currentState)
 
 undoMove currentState =
-  case currentState of
-    x:xs -> ((), xs)
-    _ -> ((), currentState)
+  if length currentState > 1
+  then ("", tail currentState)
+  else ("", currentState)
+
+printState currentState =
+  do let (bender, cityMap) = head currentState
+     cityMap
+      |> Map.insert (location bender) BenderCharacter
+      |> printMap
+      |> putStrLn
 
 -- State manipulation
 update = state stateUpdate
-undo :: State [(Bender, CityMap)] ()
+undo :: State [(Bender, CityMap)] String
 undo = state undoMove
+doNothing :: State [(Bender, CityMap)] String
+doNothing = state (\currentState -> ("", currentState))
 
 -- Run game
 runGame = do
@@ -166,11 +207,4 @@ runGame = do
 computeBendersMoves :: [String] -> [String]
 computeBendersMoves stringMap =
   let cityMap = readMap stringMap
-      initialBender =
-        Bender { inverted = False,
-                 breakerMode = False,
-                 location = start cityMap,
-                 heading = S,
-                 alive = True,
-                 obstaclesEaten = 0}
-  in evalState runGame [(initialBender, cityMap)]
+  in evalState runGame [(initialBender cityMap, cityMap)]
