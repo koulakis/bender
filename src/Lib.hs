@@ -201,4 +201,7 @@ runGame = do
 computeBendersMoves :: [String] -> [String]
 computeBendersMoves stringMap =
   let cityMap = readMap stringMap
-  in evalState runGame [(initialBender cityMap, cityMap)]
+      directions = evalState runGame [(initialBender cityMap, cityMap)]
+  in if last directions == "LOOP"
+     then ["LOOP"]
+     else directions
