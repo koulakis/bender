@@ -8,7 +8,7 @@ import System.Console.ANSI
 import Data.Map as Map
 import System.IO
 
-cityMap = readMap $ sketch cityMap2
+cityMap = readMap $ sketch cityMap9
 initialState = [(initialBender cityMap, cityMap)]
 
 chooseStateAction key =
