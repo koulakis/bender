@@ -4,6 +4,7 @@ import Lib
 import Control.Monad.State
 import System.Console.ANSI
 import Data.Map as Map
+import System.IO
 
 testMap =
   ["######",
@@ -33,4 +34,7 @@ mainLoop currentState =
      mainLoop newState
 
 main :: IO()
-main = mainLoop initialState
+main =
+  do hSetBuffering stdin NoBuffering
+     hSetBuffering stdout NoBuffering
+     mainLoop initialState

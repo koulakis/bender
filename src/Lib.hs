@@ -17,8 +17,12 @@ import Control.Monad.State
 import Data.Set as Set
 import Data.Function (on)
 
--- Pipes
+-- Custom tools
 (|>) x f = f x
+groupByUnordered transform collection =
+  collection
+  |> List.sortBy (compare `on` transform)
+  |> List.groupBy ((==) `on` transform)
 
 -- Types
 data Direction = S | E | N | W deriving (Show, Eq, Ord)
@@ -79,7 +83,7 @@ readMap stringArray =
 printMap cityMap =
   cityMap
   |> Map.toList
-  |> List.groupBy ((==) `on` fst .fst)
+  |> groupByUnordered (snd . fst)
   |> List.map (List.map (printMapSymbol . snd))
   |> List.intersperse "\n"
   |> (\l -> "\n":l)
