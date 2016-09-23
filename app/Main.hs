@@ -5,12 +5,29 @@ import CityMaps
 
 import Control.Monad.State
 import System.Console.ANSI
-import Data.Map as Map
+import qualified Data.Map as Map
+import Data.List as List
 import System.IO
 
-cityMap = readMap $ sketch cityMap9
-initialState = [(initialBender cityMap, cityMap)]
-
+selectMap :: [MapInfo] -> IO CityMap
+selectMap availableMaps =
+  do let names =
+          availableMaps
+          |> zipWith
+              (\x y -> show x ++ ". " ++ name y)
+              [1..(length availableMaps)]
+          |> intersperse "\n"
+          |> concat
+     putStrLn $ "Please select one of the following maps:\n\n" ++ names
+     selection <- getLine
+     let selectedMap =
+           selection
+           |> (\x -> read x :: Int)
+           |> \x -> availableMaps!!(x - 1)
+           |> sketch
+           |> readMap
+     return selectedMap
+     
 chooseStateAction key =
   case key of
     'k' -> undo
@@ -32,4 +49,6 @@ main :: IO()
 main =
   do hSetBuffering stdin NoBuffering
      hSetBuffering stdout NoBuffering
+     cityMap <- selectMap cityMaps
+     let initialState = [(initialBender cityMap, cityMap)]
      mainLoop initialState
