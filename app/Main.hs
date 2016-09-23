@@ -1,19 +1,14 @@
 module Main where
 
 import Lib
+import CityMaps
+
 import Control.Monad.State
 import System.Console.ANSI
 import Data.Map as Map
 import System.IO
 
-testMap =
-  ["######",
-   "#@E $#",
-   "# N  #",
-   "#X   #",
-   "######"]
-
-cityMap = readMap testMap
+cityMap = readMap $ sketch cityMap2
 initialState = [(initialBender cityMap, cityMap)]
 
 chooseStateAction key =

@@ -1,35 +1,25 @@
 module Spec where
 
-import Lib (computeBendersMoves)
+import Lib (computeBendersMoves, (|>))
 import Test.HUnit
+import CityMaps
 
-map1 =
-  ["######",
-   "#@E $#",
-   "# N  #",
-   "#X   #",
-   "######"]
-test1 = TestCase $ assertEqual
-  "Simple moves"
-  (computeBendersMoves map1)
+testOfMap cityMap output =
+  assertEqual
+    (name cityMap)
+    (computeBendersMoves $ sketch cityMap)
+    output
+  |> TestCase
+  |> TestLabel (name cityMap)
+
+test1 = testOfMap cityMap1
   ["SOUTH",
    "EAST",
    "NORTH",
    "EAST",
    "EAST"]
 
-map2 =
-  ["########",
-   "# @    #",
-   "#     X#",
-   "# XXX  #",
-   "#   XX #",
-   "#   XX #",
-   "#     $#",
-   "########"]
-test2 = TestCase $ assertEqual
-  "Obstacles"
-  (computeBendersMoves map2)
+test2 = testOfMap cityMap2
   ["SOUTH",
    "EAST",
    "EAST",
@@ -40,18 +30,7 @@ test2 = TestCase $ assertEqual
    "SOUTH",
    "SOUTH"]
 
-map3 =
-  ["########",
-   "#     $#",
-   "#      #",
-   "#      #",
-   "#  @   #",
-   "#      #",
-   "#      #",
-   "########"]
-test3 = TestCase $ assertEqual
-  "Priorities"
-  (computeBendersMoves map3)
+test3 = testOfMap cityMap3
   ["SOUTH",
    "SOUTH",
    "EAST",
@@ -63,6 +42,4 @@ test3 = TestCase $ assertEqual
    "NORTH",
    "NORTH"]
 
-specs = TestList [TestLabel "Simple moves" test1,
-                  TestLabel "Obsticles" test2,
-                  TestLabel "Priorities" test3]
+specs = TestList [test1, test2, test3]
