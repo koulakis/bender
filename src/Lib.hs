@@ -13,6 +13,8 @@ groupByUnordered transform collection =
   collection
   |> sortBy (compare `on` transform)
   |> groupBy ((==) `on` transform)
+(|*) m f = f <*> m
+(|$) m f = f <$> m
 
 -- Types
 data Direction = S | E | N | W deriving (Show, Eq, Ord)

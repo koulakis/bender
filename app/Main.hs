@@ -9,46 +9,50 @@ import qualified Data.Map as Map
 import Data.List as List
 import System.IO
 
-selectMap :: [MapInfo] -> IO CityMap
+printAvailableMaps availableMaps =
+  putStrLn
+    ("Please select one of the following maps:\n\n"
+    ++
+    (availableMaps
+    |> zipWith
+        (\x y -> show x ++ ". " ++ name y)
+        [1..(length availableMaps)]
+    |> intersperse "\n"
+    |> concat))
+
+getSelectedMap availableMaps =
+  getLine
+  |$ \selection ->
+    selection
+    |> (\x -> read x :: Int)
+    |> \x -> availableMaps!!(x - 1)
+    |> sketch
+    |> readMap
+
 selectMap availableMaps =
-  do let names =
-          availableMaps
-          |> zipWith
-              (\x y -> show x ++ ". " ++ name y)
-              [1..(length availableMaps)]
-          |> intersperse "\n"
-          |> concat
-     putStrLn $ "Please select one of the following maps:\n\n" ++ names
-     selection <- getLine
-     let selectedMap =
-           selection
-           |> (\x -> read x :: Int)
-           |> \x -> availableMaps!!(x - 1)
-           |> sketch
-           |> readMap
-     return selectedMap
-     
+  printAvailableMaps availableMaps
+  >> getSelectedMap availableMaps
+
 chooseStateAction key =
   case key of
-    'k' -> undo
-    'l' -> Lib.update
-    _ -> doNothing
+    'k' -> snd . undoMove
+    'l' -> snd . stateUpdate
+    _ -> id
 
-singleAction currentState =
-  do key <- getChar
-     let newState = execState (chooseStateAction key) currentState
-     clearScreen
-     printState newState
-     return newState
+singleStep =
+  lift clearScreen
+  >> get
+  >>= lift . printState
+  >> lift getChar
+  >>= modify . chooseStateAction
+  >> get
 
-mainLoop currentState =
-  do newState <- singleAction currentState
-     mainLoop newState
+mainLoop = singleStep >> mainLoop
 
 main :: IO()
 main =
-  do hSetBuffering stdin NoBuffering
-     hSetBuffering stdout NoBuffering
-     cityMap <- selectMap cityMaps
-     let initialState = [(initialBender cityMap, cityMap)]
-     mainLoop initialState
+  hSetBuffering stdin NoBuffering
+  >> hSetBuffering stdout NoBuffering
+  >> selectMap cityMaps
+  >>= \cityMap -> evalStateT mainLoop [(initialBender cityMap, cityMap)]
+  >>= \x -> return ()
