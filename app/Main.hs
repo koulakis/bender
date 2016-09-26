@@ -39,15 +39,14 @@ chooseStateAction key =
     'l' -> snd . stateUpdate
     _ -> id
 
-singleStep =
+mainLoop =
   lift clearScreen
   >> get
   >>= lift . printState
   >> lift getChar
   >>= modify . chooseStateAction
   >> get
-
-mainLoop = singleStep >> mainLoop
+  >> mainLoop
 
 main :: IO()
 main =
