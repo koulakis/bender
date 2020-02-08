@@ -5,9 +5,9 @@ description:         Please see README.md
 homepage:            https://github.com/githubuser/Bender#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
+author:              Marios Koulakis
 maintainer:          example@example.com
-copyright:           2016 Author name here
+copyright:           2016 Marios Koulakis
 category:            Web
 build-type:          Simple
 -- extra-source-files:

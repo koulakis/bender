@@ -10,7 +10,8 @@ In the beginning you are asked to pick one of the given maps (write the number a
 
 ## Setup
 
-To setup and compile the project, run `stack setup && stack build`
+To setup and compile the project, run `stack setup && stack build`.
+
 To run it: `stack exec Bender-exe`.
 
 ## Known issues
